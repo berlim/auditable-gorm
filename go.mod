@@ -1,4 +1,4 @@
-module auditableGorm
+module berlim/auditable-gorm
 
 go 1.13.4
 
