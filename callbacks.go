@@ -69,15 +69,6 @@ func (p *Plugin) addUpdated(scope *gorm.Scope) {
 		return
 	}
 
-	if p.opts.lazyUpdate {
-		record, err := p.GetLastRecord(interfaceToString(scope.PrimaryKeyValue()), false)
-		if err == nil {
-			if isEqual(record.RawObject, scope.Value, p.opts.lazyUpdateFields...) {
-				return
-			}
-		}
-	}
-
 	_ = addUpdateRecord(scope, p.opts)
 }
 
@@ -110,27 +101,6 @@ func addUpdateRecord(scope *gorm.Scope, opts options) error {
 
 	return nil
 }
-
-//func newChangeLog(scope *gorm.Scope, action string) (*ChangeLog, error) {
-//	rawObject, err := json.Marshal(scope.Value)
-//	if err != nil {
-//		return nil, err
-//	}
-//	id, err := uuid.NewV4()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return &ChangeLog{
-//		ID:         id,
-//		Action:     action,
-//		ObjectID:   interfaceToString(scope.PrimaryKeyValue()),
-//		ObjectType: scope.GetModelStruct().ModelType.Name(),
-//		RawObject:  string(rawObject),
-//		RawMeta:    string(fetchChangeLogMeta(scope)),
-//		RawDiff:    "null",
-//	}, nil
-//}
 
 func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
 	var newVersion int64

@@ -35,11 +35,6 @@ func (im *identityManager) save(value, pk interface{}) {
 
 	newValue := value
 
-	value = nil
-
-	fmt.Println("Endereço de memoria newValue: ", &newValue)
-	fmt.Println("Endereço de memoria value: ", &value)
-
 	key := genIdentityKey(t, pk)
 	im.m[key] = newValue
 
