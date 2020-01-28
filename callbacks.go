@@ -85,7 +85,7 @@ func addUpdateRecord(scope *gorm.Scope, opts options) error {
 		return err
 	}
 
-	//if opts.computeDiff {
+
 		diff := computeUpdateDiff(scope)
 
 		if diff != nil {
@@ -95,7 +95,7 @@ func addUpdateRecord(scope *gorm.Scope, opts options) error {
 
 			scope.DB().Create(cl)
 		}
-	//}
+
 
 
 

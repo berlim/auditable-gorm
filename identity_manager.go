@@ -9,7 +9,6 @@ import (
 
 type identityMap map[string]interface{}
 
-// identityManager is used as cache.
 type identityManager struct {
 	m identityMap
 }
