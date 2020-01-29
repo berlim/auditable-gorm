@@ -102,7 +102,7 @@ func getLoggableFieldNames(value interface{}) []string {
 	for i := 0; i < qtd_fields; i++ {
 		field := t.Field(i)
 		fieldName := field.Name
-		fmt.Printf("name: %v", fieldName)
+
 
 		trackable := ColumnTrackable(fieldName)
 		if !trackable {
