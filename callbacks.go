@@ -93,13 +93,13 @@ func addUpdateRecord(scope *gorm.Scope, opts options) error {
 
 			cl.Audited_changes = formatedDiff
 
-			scope.DB().Create(cl)
+			err = scope.DB().Table("audits").Create(cl).Error
 		}
 
 
 
 
-	return nil
+	return err
 }
 
 func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
@@ -138,7 +138,7 @@ func addRecord(scope *gorm.Scope, action string) error {
 		return nil
 	}
 
-	return scope.DB().Create(cl).Error
+	return scope.DB().Table("audits").Create(cl).Error
 }
 
 func computeUpdateDiff(scope *gorm.Scope) UpdateDiff {
