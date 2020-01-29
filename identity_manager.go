@@ -27,11 +27,6 @@ func (im *identityManager) save(value, pk interface{}) {
 
 	t := i.Type()
 
-	name := t.Name()
-	qtd := t.NumField()
-
-	fmt.Printf("Type: %v Qtd: %v", name, qtd)
-
 	newValue := value
 
 	key := genIdentityKey(t, pk)

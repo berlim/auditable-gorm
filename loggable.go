@@ -30,6 +30,11 @@ type Audits struct {
 	Remote_address		string  `gorm:"column:remote_address"`
 }
 
+
+func (Audits) TableName() string {
+	return "audits"
+}
+
 func isLoggable(value interface{}) bool {
 	_, ok := value.(Interface)
 	return ok
