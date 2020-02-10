@@ -1,4 +1,4 @@
-module github.com/berlim/auditable-gormf
+module github.com/berlim/auditable-gorm
 
 go 1.13.4
 
