@@ -10,10 +10,6 @@ type Plugin struct {
 }
 
 func Register(db *gorm.DB, opts ...Option) (Plugin, error) {
-	err := db.AutoMigrate(&Audits{}).Error
-	if err != nil {
-		return Plugin{}, err
-	}
 	o := options{}
 	for _, option := range opts {
 		option(&o)
