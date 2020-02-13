@@ -97,7 +97,7 @@ func addUpdateRecord(scope *gorm.Scope, opts options) error {
 
 			cl.Audited_changes = formatedDiff
 
-			err = scope.DB().Table("audits").Create(cl).Error
+			err = scope.DB().Table("paymentx.audits").Create(cl).Error
 		}
 
 
@@ -120,7 +120,7 @@ func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
 
 	if (action == "update"){
 		var lastVersion Audits
-		scope.DB().Table("audits").Select("version").Where("auditable_id = ? and auditable_type = ?", auditable_id, auditable_type).Last(&lastVersion)
+		scope.DB().Table("paymentx.audits").Select("version").Where("auditable_id = ? and auditable_type = ?", auditable_id, auditable_type).Last(&lastVersion)
 		newVersion = lastVersion.Version + 1
 	}
 
@@ -144,7 +144,7 @@ func addRecord(scope *gorm.Scope, action string) error {
 		return nil
 	}
 
-	return scope.DB().Table("audits").Create(cl).Error
+	return scope.DB().Table("paymentx.audits").Create(cl).Error
 }
 
 func computeUpdateDiff(scope *gorm.Scope) UpdateDiff {
