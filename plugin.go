@@ -1,6 +1,7 @@
 package auditableGorm
 
 import (
+	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 )
 
@@ -21,4 +22,16 @@ func Register(db *gorm.DB, opts ...Option) (Plugin, error) {
 	callback.Update().After("gorm:after_update").Register("loggable:update", p.addUpdated)
 	callback.Delete().After("gorm:after_delete").Register("loggable:delete", p.addDeleted)
 	return p, nil
+}
+
+func (p *Plugin) SetRemoteAdress(ip string) error{
+	uuid, err := uuid.NewUUID()
+	if err != nil{
+		return err
+	}
+
+	requestUUID = uuid.String()
+	remoteAddres = ip
+
+	return err
 }

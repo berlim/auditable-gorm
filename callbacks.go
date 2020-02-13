@@ -9,6 +9,8 @@ import (
 )
 
 var im = newIdentityManager()
+var requestUUID = ""
+var remoteAddres = ""
 
 const (
 	actionCreate = "create"
@@ -17,6 +19,8 @@ const (
 )
 
 type UpdateDiff map[string]interface{}
+
+
 
 // Hook for after_query.
 func (p *Plugin) trackEntity(scope *gorm.Scope) {
@@ -128,6 +132,8 @@ func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
 		Auditable_type: 	auditable_type,
 		Audited_changes:    string(rawObject),
 		Version:			newVersion,
+		Remote_address:		remoteAddres,
+		Request_uuid:		requestUUID,
 	}, nil
 }
 

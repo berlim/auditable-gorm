@@ -28,6 +28,7 @@ type Audits struct {
 	Audited_changes		string  `gorm:"column:audited_changes"`
 	Version				int64  `gorm:"column:version"`
 	Remote_address		string  `gorm:"column:remote_address"`
+	Request_uuid		string  `gorm:"column:request_uuid"`
 }
 
 
