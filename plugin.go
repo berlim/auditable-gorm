@@ -32,6 +32,5 @@ func (p *Plugin) SetRemoteAdress(ip string) error{
 
 	requestUUID = uuid.String()
 	remoteAddres = ip
-
 	return err
 }
