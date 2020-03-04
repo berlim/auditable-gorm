@@ -119,9 +119,9 @@ func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
 	auditable_type := scope.GetModelStruct().ModelType.Name()
 
 	if (action == "update"){
-		var lastVersion Audits
-		scope.DB().Table("paymentx.audits").Select("version").Where("auditable_id = ? and auditable_type = ?", auditable_id, auditable_type).Last(&lastVersion)
-		newVersion = lastVersion.Version + 1
+		//var lastVersion Audits
+		//scope.DB().Table("paymentx.audits").Select("version").Where("auditable_id = ? and auditable_type = ?", auditable_id, auditable_type).Last(&lastVersion)
+		newVersion = 1
 	}
 
 
