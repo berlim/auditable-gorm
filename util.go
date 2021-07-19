@@ -9,7 +9,8 @@ import (
 )
 
 const loggableTag = "gorm-loggable"
-var ignoreColumns = [...]string {"Id", "CreatedAt", "UpdatedAt", "LoggableModel"}
+
+var ignoreColumns = [...]string{"Id", "CreatedAt", "UpdatedAt", "LoggableModel"}
 
 func isEqual(item1, item2 interface{}, except ...string) bool {
 	except = StringMap(except, ToSnakeCase)
@@ -103,7 +104,6 @@ func getLoggableFieldNames(value interface{}) []string {
 		field := t.Field(i)
 		fieldName := field.Name
 
-
 		trackable := ColumnTrackable(fieldName)
 		if !trackable {
 			continue
@@ -115,25 +115,24 @@ func getLoggableFieldNames(value interface{}) []string {
 	return names
 }
 
-func ColumnTrackable(fieldName string) (bool) {
+func ColumnTrackable(fieldName string) bool {
 	for i, item := range ignoreColumns {
 		if item == fieldName {
 			return false
 		}
 		// so pra ignorar o index mesmo
-		i=i
+		i = i
 	}
 
 	return true
 }
 
-
-func FormatDiff(m map[string]interface{}) string{
+func FormatDiff(m map[string]interface{}) string {
 	result := ""
 	for key, value := range m {
 		result = fmt.Sprintf("%v%v: %v\n", result, key, value)
 	}
 
-	result = result[:len(result) - 1]
+	result = result[:len(result)-1]
 	return result
 }

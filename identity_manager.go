@@ -47,7 +47,6 @@ func (im identityManager) get(value, pk interface{}) interface{} {
 		return nil
 	}
 
-
 	return m
 }
 

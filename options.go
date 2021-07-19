@@ -14,5 +14,3 @@ type options struct {
 	objectTypes      map[string]reflect.Type
 	computeDiff      bool
 }
-
-
