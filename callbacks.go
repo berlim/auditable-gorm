@@ -9,47 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
-var im = newIdentityManager()
-var requestUUID = ""
-var remoteAddres = ""
-
 const (
-	actionCreate = "create"
-	actionUpdate = "update"
-	actionDelete = "delete"
+	ACTION_CREATE = "create"
+	actionUpdate  = "update"
+	actionDelete  = "delete"
 )
-
-type UpdateDiff map[string]interface{}
-
-// Hook for after_query.
-// func (p *Plugin) trackEntity(scope *gorm.Scope) {
-// 	if !isLoggable(scope.Value) || !isEnabled(scope.Value) {
-// 		return
-// 	}
-
-// 	v := reflect.Indirect(reflect.ValueOf(scope.Value))
-
-// 	pkName := scope.PrimaryField().Name
-// 	if v.Kind() == reflect.Slice {
-// 		for i := 0; i < v.Len(); i++ {
-// 			sv := reflect.Indirect(v.Index(i))
-// 			el := sv.Interface()
-// 			if !isLoggable(el) {
-// 				continue
-// 			}
-
-// 			im.save(el, sv.FieldByName(pkName))
-// 		}
-// 		return
-// 	}
-
-// 	m := v.Interface()
-// 	if !isLoggable(m) {
-// 		return
-// 	}
-
-// 	im.save(v.Interface(), scope.PrimaryKeyValue())
-// }
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
@@ -61,11 +25,11 @@ func (p *Plugin) addCreated(db *gorm.DB) {
 			if strings.ToLower(field.Name) == "id" {
 				switch field.DataType {
 				case "uint":
-					id = int64(fieldValue.(uint))
+					id = int64(fieldValue.(uint64))
 				case "uint64":
 					id = int64(fieldValue.(uint64))
 				case "int":
-					id = int64(fieldValue.(int))
+					id = int64(fieldValue.(int64))
 				case "int64":
 					id = fieldValue.(int64)
 				}
@@ -74,18 +38,19 @@ func (p *Plugin) addCreated(db *gorm.DB) {
 				fmt.Sprintf("\n%s: %v", field.Name, fieldValue))
 		}
 	}
+	// TODO: verificar se o model implementa a interface AuditableModel
 	if buff.Len() > 0 {
+		dba, _ := gorm.Open(db.Dialector, db.Config)
 		uuid, _ := uuid.NewUUID()
-
 		audit := Audits{
 			Auditable_id:    id,
-			Action:          actionCreate,
+			Action:          ACTION_CREATE,
 			Auditable_type:  db.Statement.Schema.Name,
 			Version:         int64(1),
 			Request_uuid:    uuid.String(),
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 
-		db.Create(&audit)
+		dba.Table("audits").Create(&audit)
 	}
 }
 

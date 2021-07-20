@@ -17,7 +17,7 @@ func (l LoggableModel) isEnabled() bool { return !l.Disabled }
 func (l LoggableModel) Enable(v bool)   { l.Disabled = !v }
 
 type Audits struct {
-	Id              int64  `gorm:"auto:id"`
+	ID              int64  `gorm:"auto:id"`
 	Auditable_id    int64  `gorm:"column:auditable_id"`
 	Auditable_type  string `gorm:"column:auditable_type"`
 	User_id         int64  `gorm:"column:user_id"`
@@ -27,6 +27,11 @@ type Audits struct {
 	Version         int64  `gorm:"column:version"`
 	Remote_address  string `gorm:"column:remote_address"`
 	Request_uuid    string `gorm:"column:request_uuid"`
+}
+
+type AuditableModel interface {
+	GetRequestUUID() string
+	GetRequestIP() string
 }
 
 func (Audits) TableName() string {
