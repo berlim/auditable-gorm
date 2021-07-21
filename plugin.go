@@ -15,9 +15,8 @@ func Register(db *gorm.DB, opts ...Option) (Plugin, error) {
 		option(&o)
 	}
 	p := Plugin{db: db, opts: o}
-	callback := db.Callback()
-	callback.Create().After("gorm:create").Register("loggable:create", p.addCreated)
-	callback.Update().After("gorm:update").Register("loggable:update", p.addUpdated)
-	callback.Delete().After("gorm:delete").Register("loggable:delete", p.addDeleted)
+	db.Callback().Create().After("gorm:create").Register("audit:after_create", p.addCreated)
+	db.Callback().Delete().After("gorm:delete").Register("audit:after_delete", p.addDeleted)
+	// db.Callback().Update().After("gorm:update").Register("loggable:update", p.addUpdated)
 	return p, nil
 }

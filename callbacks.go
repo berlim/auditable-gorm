@@ -11,12 +11,54 @@ import (
 
 const (
 	ACTION_CREATE = "create"
-	actionUpdate  = "update"
-	actionDelete  = "delete"
+	ACTION_UPDATE = "update"
+	ACTION_DELETE = "delete"
 )
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
+	fmt.Println("addCreated")
+	auditChanges(db, ACTION_CREATE)
+}
+
+// Hook for after_update.
+func (p *Plugin) addUpdated(db *gorm.DB) {
+	// loggable := isLoggable(scope.Value)
+	// enable := isEnabled(scope.Value)
+	// if !loggable || !enable {
+	// 	return
+	// }
+
+	// _ = addUpdateRecord(scope, p.opts)
+}
+
+// Hook for after_delete.
+func (p *Plugin) addDeleted(db *gorm.DB) {
+	fmt.Println("addDeleted")
+	auditChanges(db, ACTION_DELETE)
+}
+
+func addUpdateRecord(db *gorm.DB, opts options) error {
+	return nil
+	// cl, err := newChangeLog(scope, actionUpdate)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// diff := computeUpdateDiff(scope)
+
+	// if diff != nil {
+	// 	formatedDiff := FormatDiff(diff)
+
+	// 	cl.Audited_changes = formatedDiff
+
+	// 	err = scope.DB().Table("paymentx.audits").Create(cl).Error
+	// }
+
+	// return err
+}
+
+func auditChanges(db *gorm.DB, action string) {
 	var buff bytes.Buffer
 	var id int64
 	for _, field := range db.Statement.Schema.Fields {
@@ -40,56 +82,20 @@ func (p *Plugin) addCreated(db *gorm.DB) {
 	}
 	// TODO: verificar se o model implementa a interface AuditableModel
 	if buff.Len() > 0 {
-		dba, _ := gorm.Open(db.Dialector, db.Config)
+		// por algum motivo nao funciona
+		// gorm.Open(db.Dialector, db.Config)
 		uuid, _ := uuid.NewUUID()
 		audit := Audits{
 			Auditable_id:    id,
-			Action:          ACTION_CREATE,
+			Action:          action,
 			Auditable_type:  db.Statement.Schema.Name,
 			Version:         int64(1),
 			Request_uuid:    uuid.String(),
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 
-		dba.Table("audits").Create(&audit)
+		// esta inserindo na tabela de users :(
+		db.Table("audits").Create(&audit)
 	}
-}
-
-// Hook for after_update.
-func (p *Plugin) addUpdated(db *gorm.DB) {
-	// loggable := isLoggable(scope.Value)
-	// enable := isEnabled(scope.Value)
-	// if !loggable || !enable {
-	// 	return
-	// }
-
-	// _ = addUpdateRecord(scope, p.opts)
-}
-
-// Hook for after_delete.
-func (p *Plugin) addDeleted(db *gorm.DB) {
-	// if isLoggable(scope.Value) && isEnabled(scope.Value) {
-	// 	_ = addRecord(scope, actionDelete)
-	// }
-}
-
-func addUpdateRecord(db *gorm.DB, opts options) error {
-	return nil
-	// cl, err := newChangeLog(scope, actionUpdate)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// diff := computeUpdateDiff(scope)
-
-	// if diff != nil {
-	// 	formatedDiff := FormatDiff(diff)
-
-	// 	cl.Audited_changes = formatedDiff
-
-	// 	err = scope.DB().Table("paymentx.audits").Create(cl).Error
-	// }
-
-	// return err
 }
 
 // func newChangeLog(scope *gorm.Scope, action string) (*Audits, error) {
