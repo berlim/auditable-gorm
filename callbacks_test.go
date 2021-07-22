@@ -87,6 +87,7 @@ func TestAddUpdate(t *testing.T) {
 	}
 
 	user.Name = "Janderson Updated"
+	user.Email = "updated@email.com"
 	if err := db.Save(&user).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -94,11 +95,11 @@ func TestAddUpdate(t *testing.T) {
 	audits := Audits{}
 	db.Last(&audits)
 
-	// assert.Equal(t, user.Id, audits.Auditable_id)
-	// assert.Equal(t, ACTION_DELETE, audits.Action)
-	// assert.Equal(t, "User", audits.Auditable_type)
-	// assert.Equal(t, int64(1), audits.Version)
-	// assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+	assert.Equal(t, user.Id, audits.Auditable_id)
+	assert.Equal(t, ACTION_UPDATE, audits.Action)
+	assert.Equal(t, "User", audits.Auditable_type)
+	assert.Equal(t, int64(1), audits.Version)
+	assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com", audits.Audited_changes)
 }
 
 func getUser() User {
@@ -133,8 +134,17 @@ func connectDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	Register(db)
+
+	sqlDb, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDb.SetMaxIdleConns(1)
+	sqlDb.SetMaxOpenConns(10)
+
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Audits{})
+
+	Register(db)
 	return db
 }
