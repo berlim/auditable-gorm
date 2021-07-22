@@ -2,6 +2,7 @@ package auditableGorm
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -17,74 +18,72 @@ const (
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
-	fmt.Println("addCreated")
-	auditChanges(db, ACTION_CREATE)
-}
-
-// Hook for after_update.
-func (p *Plugin) addUpdated(db *gorm.DB) {
-	// loggable := isLoggable(scope.Value)
-	// enable := isEnabled(scope.Value)
-	// if !loggable || !enable {
-	// 	return
-	// }
-
-	// _ = addUpdateRecord(scope, p.opts)
+	saveAudit(db, p.db, ACTION_CREATE)
 }
 
 // Hook for after_delete.
 func (p *Plugin) addDeleted(db *gorm.DB) {
-	fmt.Println("addDeleted")
-	auditChanges(db, ACTION_DELETE)
+	saveAudit(db, p.db, ACTION_DELETE)
 }
 
-func addUpdateRecord(db *gorm.DB, opts options) error {
-	return nil
-	// cl, err := newChangeLog(scope, actionUpdate)
-	// if err != nil {
-	// 	return err
-	// }
+// Hook for after_update.
+func (p *Plugin) addUpdated(db *gorm.DB) {
+	if db.Statement.Schema.Table == "audits" {
+		return
+	}
+	// var buff bytes.Buffer
+	var id int64
+	idValue, isZero := db.Statement.Schema.PrioritizedPrimaryField.ValueOf(db.Statement.ReflectValue)
+	if !isZero {
+		id = idValue.(int64)
+	}
+	fmt.Println(id)
 
-	// diff := computeUpdateDiff(scope)
+	original := map[string]interface{}{}
+	db.Find(&original, id)
 
-	// if diff != nil {
-	// 	formatedDiff := FormatDiff(diff)
-
-	// 	cl.Audited_changes = formatedDiff
-
-	// 	err = scope.DB().Table("paymentx.audits").Create(cl).Error
-	// }
-
-	// return err
+	if dest, err := getModelAsMap(db.Statement.Model); err == nil {
+		for destK, destV := range dest {
+			// TODO: check if value is diff using reflect
+			if originalV, ok := original[strings.ToLower(destK)]; ok && originalV != destV {
+				fmt.Println(destV)
+			}
+		}
+		fmt.Println(original)
+		fmt.Println(dest)
+		fmt.Println("out")
+	}
 }
 
-func auditChanges(db *gorm.DB, action string) {
+func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
+	b, err := json.Marshal(model)
+	if err != nil {
+		return
+	}
+	json.Unmarshal(b, &out)
+	return
+}
+
+func saveAudit(db, pluginDb *gorm.DB, action string) {
+	if db.Statement.Schema.Table == "audits" {
+		return
+	}
 	var buff bytes.Buffer
 	var id int64
+	idValue, isZero := db.Statement.Schema.PrioritizedPrimaryField.ValueOf(db.Statement.ReflectValue)
+	if !isZero {
+		id = idValue.(int64)
+	}
 	for _, field := range db.Statement.Schema.Fields {
 		fieldValue, isZero := field.ValueOf(db.Statement.ReflectValue)
 		if !isZero {
-			if strings.ToLower(field.Name) == "id" {
-				switch field.DataType {
-				case "uint":
-					id = int64(fieldValue.(uint64))
-				case "uint64":
-					id = int64(fieldValue.(uint64))
-				case "int":
-					id = int64(fieldValue.(int64))
-				case "int64":
-					id = fieldValue.(int64)
-				}
-			}
-			buff.WriteString(
-				fmt.Sprintf("\n%s: %v", field.Name, fieldValue))
+			buff.WriteString(fmt.Sprintf("\n%s: %v", field.Name, fieldValue))
 		}
 	}
 	// TODO: verificar se o model implementa a interface AuditableModel
 	if buff.Len() > 0 {
-		// por algum motivo nao funciona
-		// gorm.Open(db.Dialector, db.Config)
 		uuid, _ := uuid.NewUUID()
+
 		audit := Audits{
 			Auditable_id:    id,
 			Action:          action,
@@ -93,8 +92,7 @@ func auditChanges(db *gorm.DB, action string) {
 			Request_uuid:    uuid.String(),
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 
-		// esta inserindo na tabela de users :(
-		db.Table("audits").Create(&audit)
+		pluginDb.Table("audits").Create(&audit)
 	}
 }
 
