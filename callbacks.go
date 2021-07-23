@@ -74,7 +74,8 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 }
 
 func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
-	if db.Statement.Schema.Table == "audits" {
+	auditTableName := getTableName()
+	if db.Statement.Schema.Table == auditTableName {
 		return
 	}
 	var id int64
@@ -95,7 +96,7 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 		// insert using pluginDb because using just db will attempt to inser
 		// on users table. I don't know why
-		if err := pluginDb.Table("audits").Create(&audit).Error; err != nil {
+		if err := pluginDb.Table(auditTableName).Create(&audit).Error; err != nil {
 			log.Printf("audits insert error - %v", err)
 		}
 	}

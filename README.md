@@ -31,3 +31,7 @@ auditData := AuditData{UUID: "your-uuid", Address: "your-ip"}
 ctx := context.WithValue(context.Background(), auditableGorm.AUDIT_DATA_CTX_KEY, auditData)
 db = db.WithContext(ctx)
 ```
+
+## Advanced
+
+To change audit table name you can set `AUDIT_TABLE=yourcustomtable` environment variable.

@@ -161,7 +161,7 @@ func TestAddUpdate(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, IP, audits.Remote_address)
 		assert.Equal(t, UUID, audits.Request_uuid)
-		assert.Contains(t, audits.Audited_changes, "---\nname:\n- Janderson\n- Janderson Updated")
+		assert.Contains(t, audits.Audited_changes, "\nname:\n- Janderson\n- Janderson Updated")
 		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
 		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- example")
 	})
@@ -192,7 +192,9 @@ func TestAddUpdate(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, "", audits.Remote_address)
 		assert.Equal(t, "", audits.Request_uuid)
-		assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com\ndesc:\n- example", audits.Audited_changes)
+		assert.Contains(t, audits.Audited_changes, "\nname:\n- Janderson\n- Janderson Updated")
+		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
+		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- example")
 	})
 }
 

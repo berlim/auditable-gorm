@@ -1,5 +1,7 @@
 package auditableGorm
 
+import "os"
+
 type Interface interface {
 	Meta() interface{}
 	lock()
@@ -37,5 +39,13 @@ type AuditData struct {
 }
 
 func (Audits) TableName() string {
-	return "audits"
+	return getTableName()
+}
+
+func getTableName() string {
+	envName := os.Getenv("AUDIT_TABLE")
+	if envName == "" {
+		return "audits"
+	}
+	return envName
 }
