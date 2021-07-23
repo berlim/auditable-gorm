@@ -1,6 +1,7 @@
 package auditableGorm
 
 import (
+	"context"
 	"log"
 	"os"
 	"path"
@@ -20,88 +21,179 @@ type User struct {
 	Desc  string
 }
 
-// func (u User) GetRequestUUID() string {
-// 	return "uuidexample"
-// }
-
-// func (u User) GetRequestIP() string {
-// 	return "127.0.0.1"
-// }
-
 var DB_PATH = path.Join("db", "test.db")
 
+const (
+	IP   = "127.0.0.1"
+	UUID = "xxx-xxx"
+)
+
 func TestAddCreated(t *testing.T) {
-	cleanDB(t)
-	db := connectDB(t)
+	t.Run("with context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, true)
 
-	user := User{
-		Name:  "Janderson",
-		Age:   28,
-		Email: "example@email.com"}
+		user := User{
+			Name:  "Janderson",
+			Age:   28,
+			Email: "example@email.com"}
 
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatal(err)
-	}
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	audits := Audits{}
-	db.First(&audits)
+		audits := Audits{}
+		db.First(&audits)
 
-	assert.Equal(t, user.Id, audits.Auditable_id)
-	assert.Equal(t, ACTION_CREATE, audits.Action)
-	assert.Equal(t, "User", audits.Auditable_type)
-	assert.Equal(t, int64(1), audits.Version)
-	assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_CREATE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, IP, audits.Remote_address)
+		assert.Equal(t, UUID, audits.Request_uuid)
+		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+	})
+
+	t.Run("without context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, false)
+
+		user := User{
+			Name:  "Janderson",
+			Age:   28,
+			Email: "example@email.com"}
+
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		audits := Audits{}
+		db.First(&audits)
+
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_CREATE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, "", audits.Remote_address)
+		assert.Equal(t, "", audits.Request_uuid)
+		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+	})
 }
 
 func TestAddDelete(t *testing.T) {
-	cleanDB(t)
-	db := connectDB(t)
+	t.Run("with context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, true)
 
-	user := getUser()
+		user := getUser()
 
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatal(err)
-	}
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	if err := db.Delete(&user).Error; err != nil {
-		t.Fatal(err)
-	}
+		if err := db.Delete(&user).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	audits := Audits{}
-	db.Last(&audits)
+		audits := Audits{}
+		db.Last(&audits)
 
-	assert.Equal(t, user.Id, audits.Auditable_id)
-	assert.Equal(t, ACTION_DELETE, audits.Action)
-	assert.Equal(t, "User", audits.Auditable_type)
-	assert.Equal(t, int64(1), audits.Version)
-	assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_DELETE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, IP, audits.Remote_address)
+		assert.Equal(t, UUID, audits.Request_uuid)
+		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+	})
+
+	t.Run("without context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, false)
+
+		user := getUser()
+
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		if err := db.Delete(&user).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		audits := Audits{}
+		db.Last(&audits)
+
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_DELETE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, "", audits.Remote_address)
+		assert.Equal(t, "", audits.Request_uuid)
+		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+	})
 }
 
 func TestAddUpdate(t *testing.T) {
-	cleanDB(t)
-	db := connectDB(t)
+	t.Run("with context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, true)
 
-	user := getUser()
+		user := getUser()
 
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatal(err)
-	}
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	user.Name = "Janderson Updated"
-	user.Email = "updated@email.com"
-	user.Desc = "example"
-	if err := db.Save(&user).Error; err != nil {
-		t.Fatal(err)
-	}
+		user.Name = "Janderson Updated"
+		user.Email = "updated@email.com"
+		user.Desc = "example"
+		if err := db.Save(&user).Error; err != nil {
+			t.Fatal(err)
+		}
 
-	audits := Audits{}
-	db.Last(&audits)
+		audits := Audits{}
+		db.Last(&audits)
 
-	assert.Equal(t, user.Id, audits.Auditable_id)
-	assert.Equal(t, ACTION_UPDATE, audits.Action)
-	assert.Equal(t, "User", audits.Auditable_type)
-	assert.Equal(t, int64(1), audits.Version)
-	assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com\ndesc:\n- example", audits.Audited_changes)
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_UPDATE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, IP, audits.Remote_address)
+		assert.Equal(t, UUID, audits.Request_uuid)
+		assert.Contains(t, audits.Audited_changes, "---\nname:\n- Janderson\n- Janderson Updated")
+		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
+		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- example")
+	})
+
+	t.Run("without context", func(t *testing.T) {
+		cleanDB(t)
+		db := connectDB(t, false)
+
+		user := getUser()
+
+		if err := db.Create(&user).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		user.Name = "Janderson Updated"
+		user.Email = "updated@email.com"
+		user.Desc = "example"
+		if err := db.Save(&user).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		audits := Audits{}
+		db.Last(&audits)
+
+		assert.Equal(t, user.Id, audits.Auditable_id)
+		assert.Equal(t, ACTION_UPDATE, audits.Action)
+		assert.Equal(t, "User", audits.Auditable_type)
+		assert.Equal(t, int64(1), audits.Version)
+		assert.Equal(t, "", audits.Remote_address)
+		assert.Equal(t, "", audits.Request_uuid)
+		assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com\ndesc:\n- example", audits.Audited_changes)
+	})
 }
 
 func getUser() User {
@@ -121,7 +213,7 @@ func cleanDB(t *testing.T) {
 	}
 }
 
-func connectDB(t *testing.T) *gorm.DB {
+func connectDB(t *testing.T, withCtx bool) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(DB_PATH), &gorm.Config{
 		Logger: logger.New(
@@ -147,6 +239,13 @@ func connectDB(t *testing.T) *gorm.DB {
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&Audits{})
 
+	if withCtx {
+		auditData := AuditData{UUID: UUID, Address: IP}
+		ctx := context.WithValue(context.Background(), AUDIT_DATA_CTX_KEY, auditData)
+		db = db.WithContext(ctx)
+	}
+
 	Register(db)
+
 	return db
 }

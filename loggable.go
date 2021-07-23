@@ -29,9 +29,11 @@ type Audits struct {
 	Request_uuid    string `gorm:"column:request_uuid"`
 }
 
-type AuditableModel interface {
-	GetRequestUUID() string
-	GetRequestIP() string
+const AUDIT_DATA_CTX_KEY = "AUDIT_PLUGIN_DATA"
+
+type AuditData struct {
+	UUID    string
+	Address string
 }
 
 func (Audits) TableName() string {

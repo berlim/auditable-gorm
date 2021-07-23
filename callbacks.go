@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -85,14 +84,14 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 	}
 	buff := fnChanges(db, id)
 	if buff.Len() > 0 {
-		// TODO: check if model implements AuditableModel interface to get UUID
-		uuid, _ := uuid.NewUUID()
+		auditData := getAuditData(db)
 		audit := Audits{
 			Auditable_id:    id,
 			Action:          action,
 			Auditable_type:  db.Statement.Schema.Name,
 			Version:         int64(1),
-			Request_uuid:    uuid.String(),
+			Request_uuid:    auditData.UUID,
+			Remote_address:  auditData.Address,
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 		// insert using pluginDb because using just db will attempt to inser
 		// on users table. I don't know why
@@ -100,6 +99,14 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 			log.Printf("audits insert error - %v", err)
 		}
 	}
+}
+
+func getAuditData(db *gorm.DB) AuditData {
+	data, ok := db.Statement.Context.Value(AUDIT_DATA_CTX_KEY).(AuditData)
+	if ok {
+		return data
+	}
+	return AuditData{}
 }
 
 func auditProps(db *gorm.DB, id int64) (buff bytes.Buffer) {
