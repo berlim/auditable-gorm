@@ -17,6 +17,7 @@ type User struct {
 	Name  string
 	Age   int
 	Email string
+	Desc  string
 }
 
 // func (u User) GetRequestUUID() string {
@@ -88,6 +89,7 @@ func TestAddUpdate(t *testing.T) {
 
 	user.Name = "Janderson Updated"
 	user.Email = "updated@email.com"
+	user.Desc = "example"
 	if err := db.Save(&user).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +101,7 @@ func TestAddUpdate(t *testing.T) {
 	assert.Equal(t, ACTION_UPDATE, audits.Action)
 	assert.Equal(t, "User", audits.Auditable_type)
 	assert.Equal(t, int64(1), audits.Version)
-	assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com", audits.Audited_changes)
+	assert.Equal(t, "---\nname:\n- Janderson\n- Janderson Updated\nemail:\n- example@email.com\n- updated@email.com\ndesc:\n- example", audits.Audited_changes)
 }
 
 func getUser() User {
@@ -126,8 +128,8 @@ func connectDB(t *testing.T) *gorm.DB {
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 			logger.Config{
 				// SlowThreshold: time.Second, // Slow SQL threshold
-				LogLevel: logger.Info, // Log level
-				Colorful: false,       // Disable color
+				LogLevel: logger.Silent, // Log level
+				Colorful: false,         // Disable color
 			},
 		),
 	})
@@ -139,7 +141,7 @@ func connectDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	sqlDb.SetMaxIdleConns(1)
+	sqlDb.SetMaxIdleConns(10)
 	sqlDb.SetMaxOpenConns(10)
 
 	db.AutoMigrate(&User{})

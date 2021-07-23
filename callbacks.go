@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
@@ -30,25 +32,37 @@ func (p *Plugin) addDeleted(db *gorm.DB) {
 func (p *Plugin) addUpdated(db *gorm.DB) {
 	saveAudit(db, p.db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
 		buff := bytes.Buffer{}
+
 		original := map[string]interface{}{}
-		db.Find(&original, id)
+		// using db instead of p.db will generate "database lock" error
+		p.db.Table(db.Statement.Schema.Table).Where("id = ?", id).Find(&original)
 
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
 				destK = strings.ToLower(destK)
 				if originalV, ok := original[destK]; ok && originalV != destV {
-					// TODO: melhorar usando reflect
 					strDestVal := fmt.Sprintf("%v", destV)
 					strOriginalVal := fmt.Sprintf("%v", originalV)
-					if strDestVal != strOriginalVal {
+					if isZero(originalV) {
 						buff.WriteString(
-							fmt.Sprintf("\n%s:\n- %s\n- %s", destK, strOriginalVal, strDestVal))
+							fmt.Sprintf("\n%s:\n- %s", destK, strDestVal))
+					} else {
+						if strDestVal != strOriginalVal {
+							buff.WriteString(
+								fmt.Sprintf("\n%s:\n- %s\n- %s", destK, strOriginalVal, strDestVal))
+						}
 					}
 				}
 			}
 		}
+
 		return buff
 	})
+}
+
+func isZero(val interface{}) bool {
+	v := reflect.ValueOf(val)
+	return !v.IsValid() || reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
 func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
@@ -70,10 +84,9 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 		id = idValue.(int64)
 	}
 	buff := fnChanges(db, id)
-	// TODO: verificar se o model implementa a interface AuditableModel
 	if buff.Len() > 0 {
+		// TODO: check if model implements AuditableModel interface to get UUID
 		uuid, _ := uuid.NewUUID()
-
 		audit := Audits{
 			Auditable_id:    id,
 			Action:          action,
@@ -81,9 +94,11 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 			Version:         int64(1),
 			Request_uuid:    uuid.String(),
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
-
-		// TODO: fix err db locked
-		pluginDb.Table("audits").Create(&audit)
+		// insert using pluginDb because using just db will attempt to inser
+		// on users table. I don't know why
+		if err := pluginDb.Table("audits").Create(&audit).Error; err != nil {
+			log.Printf("audits insert error - %v", err)
+		}
 	}
 }
 

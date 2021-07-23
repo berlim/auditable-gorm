@@ -15,7 +15,6 @@ func Register(db *gorm.DB, opts ...Option) (Plugin, error) {
 		option(&o)
 	}
 	p := Plugin{db: db, opts: o}
-	// db.Callback().Query().After("gorm:after_query").Register("loggable:query", p.trackEntity)
 	db.Callback().Create().After("gorm:create").Register("audit:after_create", p.addCreated)
 	db.Callback().Delete().Before("gorm:delete").Register("audit:after_delete", p.addDeleted)
 	db.Callback().Update().Before("gorm:update").Register("loggable:update", p.addUpdated)

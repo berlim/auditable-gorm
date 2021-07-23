@@ -37,13 +37,3 @@ type AuditableModel interface {
 func (Audits) TableName() string {
 	return "audits"
 }
-
-func isLoggable(value interface{}) bool {
-	_, ok := value.(Interface)
-	return ok
-}
-
-func isEnabled(value interface{}) bool {
-	v, ok := value.(Interface)
-	return ok && v.isEnabled()
-}
