@@ -5,7 +5,7 @@ Audit queries using [gorm](https://gorm.io/).
 # Install 
 
 ```sh
-$ github.com/berlim/auditable-gorm
+$ go get github.com/berlim/auditable-gorm@v0.0.6
 ```
 
 # Usage
