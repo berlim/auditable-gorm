@@ -34,7 +34,7 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 
 		original := map[string]interface{}{}
 		// using db instead of p.db will generate "database lock" error
-		p.db.Table(db.Statement.Schema.Table).Where("id = ?", id).Find(&original)
+		p.db.Table(db.Statement.Table).Where("id = ?", id).Find(&original)
 
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
@@ -75,7 +75,7 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 
 func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
 	auditTableName := getTableName()
-	if db.Statement.Schema.Table == auditTableName {
+	if db.Statement.Table == auditTableName {
 		return
 	}
 	var id int64
