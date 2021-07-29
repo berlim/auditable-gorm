@@ -75,7 +75,7 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 
 func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
 	auditTableName := getTableName()
-	if db.Statement.Table == auditTableName {
+	if db.Statement.Schema.Name == "Audits" {
 		return
 	}
 	var id int64
