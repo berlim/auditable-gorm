@@ -34,7 +34,7 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 
 		original := map[string]interface{}{}
 		// using db instead of p.db will generate "database lock" error
-		p.db.Table(db.Statement.Table).Where("id = ?", id).Find(&original)
+		p.db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
 
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
@@ -74,7 +74,6 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 }
 
 func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
-	auditTableName := getTableName()
 	if db.Statement.Schema.Name == "Audits" {
 		return
 	}
@@ -96,10 +95,14 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 			Audited_changes: fmt.Sprintf("---%s", buff.String())}
 		// insert using pluginDb because using just db will attempt to inser
 		// on users table. I don't know why
-		if err := pluginDb.Table(auditTableName).Create(&audit).Error; err != nil {
+		if err := pluginDb.Table(getTableName()).Create(&audit).Error; err != nil {
 			log.Printf("audits insert error - %v", err)
 		}
 	}
+}
+
+func mountUpdateTableName(db *gorm.DB) string {
+	return db.Config.NamingStrategy.TableName(db.Statement.Table)
 }
 
 func getAuditData(db *gorm.DB) AuditData {
