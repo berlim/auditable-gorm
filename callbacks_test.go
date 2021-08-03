@@ -163,7 +163,7 @@ func TestAddUpdate(t *testing.T) {
 		assert.Equal(t, UUID, audits.Request_uuid)
 		assert.Contains(t, audits.Audited_changes, "\nname:\n- Janderson\n- Janderson Updated")
 		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
-		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- example")
+		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- \n- example")
 	})
 
 	t.Run("without context", func(t *testing.T) {
@@ -194,7 +194,7 @@ func TestAddUpdate(t *testing.T) {
 		assert.Equal(t, "", audits.Request_uuid)
 		assert.Contains(t, audits.Audited_changes, "\nname:\n- Janderson\n- Janderson Updated")
 		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
-		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- example")
+		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- \n- example")
 	})
 }
 

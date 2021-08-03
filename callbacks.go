@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 	"strings"
 
 	"gorm.io/gorm"
@@ -42,14 +41,9 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 				if originalV, ok := original[destK]; ok && originalV != destV {
 					strDestVal := fmt.Sprintf("%v", destV)
 					strOriginalVal := fmt.Sprintf("%v", originalV)
-					if isZero(originalV) {
+					if strDestVal != strOriginalVal {
 						buff.WriteString(
-							fmt.Sprintf("\n%s:\n- %s", destK, strDestVal))
-					} else {
-						if strDestVal != strOriginalVal {
-							buff.WriteString(
-								fmt.Sprintf("\n%s:\n- %s\n- %s", destK, strOriginalVal, strDestVal))
-						}
+							fmt.Sprintf("\n%s:\n- %s\n- %s", destK, strOriginalVal, strDestVal))
 					}
 				}
 			}
@@ -57,11 +51,6 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 
 		return buff
 	})
-}
-
-func isZero(val interface{}) bool {
-	v := reflect.ValueOf(val)
-	return !v.IsValid() || reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
 func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
