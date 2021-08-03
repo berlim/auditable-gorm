@@ -106,7 +106,7 @@ func auditProps(db *gorm.DB, id int64) (buff bytes.Buffer) {
 	for _, field := range db.Statement.Schema.Fields {
 		fieldValue, isZero := field.ValueOf(db.Statement.ReflectValue)
 		if !isZero {
-			buff.WriteString(fmt.Sprintf("\n%s: %v", field.Name, fieldValue))
+			buff.WriteString(fmt.Sprintf("\n%s: %v", field.DBName, fieldValue))
 		}
 	}
 	return

@@ -51,7 +51,7 @@ func TestAddCreated(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, IP, audits.Remote_address)
 		assert.Equal(t, UUID, audits.Request_uuid)
-		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
 	})
 
 	t.Run("without context", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestAddCreated(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, "", audits.Remote_address)
 		assert.Equal(t, "", audits.Request_uuid)
-		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
 	})
 }
 
@@ -104,7 +104,7 @@ func TestAddDelete(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, IP, audits.Remote_address)
 		assert.Equal(t, UUID, audits.Request_uuid)
-		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
 	})
 
 	t.Run("without context", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestAddDelete(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, "", audits.Remote_address)
 		assert.Equal(t, "", audits.Request_uuid)
-		assert.Equal(t, "---\nId: 1\nName: Janderson\nAge: 28\nEmail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
 	})
 }
 
