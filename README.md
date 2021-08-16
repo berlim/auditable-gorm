@@ -35,3 +35,11 @@ db = db.WithContext(ctx)
 ## Advanced
 
 To change audit table name you can set `AUDIT_TABLE=yourcustomtable` environment variable.
+
+# Test
+
+Run all tests:
+
+```sh
+$ AUDIT_TABLE= go test github.com/berlim/auditable-gorm/... -p 1 -v
+```

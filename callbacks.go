@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -18,32 +20,30 @@ const (
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
-	saveAudit(db, p.db, ACTION_CREATE, auditProps)
+	saveAudit(db, ACTION_CREATE, auditProps)
 }
 
 // Hook for after_delete.
 func (p *Plugin) addDeleted(db *gorm.DB) {
-	saveAudit(db, p.db, ACTION_DELETE, auditProps)
+	saveAudit(db, ACTION_DELETE, auditProps)
 }
 
 // Hook for after_update.
 func (p *Plugin) addUpdated(db *gorm.DB) {
-	saveAudit(db, p.db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
+	saveAudit(db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
 		buff := bytes.Buffer{}
 
 		original := map[string]interface{}{}
 		// using db instead of p.db will generate "database lock" error
-		p.db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
+		db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
 
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
 				destK = strings.ToLower(destK)
 				if originalV, ok := original[destK]; ok && originalV != destV {
-					strDestVal := fmt.Sprintf("%v", destV)
-					strOriginalVal := fmt.Sprintf("%v", originalV)
-					if strDestVal != strOriginalVal {
+					if !reflect.DeepEqual(destV, destK) {
 						buff.WriteString(
-							fmt.Sprintf("\n%s:\n- %s\n- %s", destK, strOriginalVal, strDestVal))
+							fmt.Sprintf("\n%s:\n- %v\n- %v", destK, originalV, destV))
 					}
 				}
 			}
@@ -62,8 +62,8 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 	return
 }
 
-func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
-	if db.Statement.Schema.Name == "Audits" {
+func saveAudit(db *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
+	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
 		return
 	}
 	var id int64
@@ -81,13 +81,47 @@ func saveAudit(db, pluginDb *gorm.DB, action string, fnChanges func(db *gorm.DB,
 			Version:         int64(1),
 			Request_uuid:    auditData.UUID,
 			Remote_address:  auditData.Address,
-			Audited_changes: fmt.Sprintf("---%s", buff.String())}
-		// insert using pluginDb because using just db will attempt to inser
-		// on users table. I don't know why
-		if err := pluginDb.Table(getTableName()).Create(&audit).Error; err != nil {
-			log.Printf("audits insert error - %v", err)
+			Audited_changes: fmt.Sprintf("---%s", buff.String()),
+			Created_at:      time.Now()}
+		db.Transaction(func(tx *gorm.DB) error {
+			return tx.Model(&Audits{}).Create(&audit).Error
+		})
+
+		auditErr := db.Exec(fmt.Sprintf(`
+			INSERT INTO
+				%s
+				(
+					auditable_id,
+					"action",
+					auditable_type,
+					"version",
+					request_uuid,
+					remote_address,
+					audited_changes,
+					created_at)
+			VALUES
+				(%v, %q, %q, %v, %q, %q, "%s", %q);
+		`, getAuditTableName(),
+			audit.Auditable_id,
+			audit.Action,
+			audit.Auditable_type,
+			audit.Version,
+			audit.Request_uuid,
+			audit.Remote_address,
+			audit.Audited_changes,
+			audit.Created_at.String())).Error
+		if auditErr != nil {
+			log.Printf("audits insert error - %v", auditErr)
 		}
 	}
+}
+
+func checkAuditName(db *gorm.DB) bool {
+	auditTable := getAuditTableName()
+	if names := strings.Split(auditTable, "."); len(names) == 2 {
+		auditTable = names[1]
+	}
+	return auditTable == db.Statement.Table
 }
 
 func mountUpdateTableName(db *gorm.DB) string {
