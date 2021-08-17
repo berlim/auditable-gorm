@@ -19,22 +19,21 @@ const (
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
-	saveAudit(db, ACTION_CREATE, auditProps)
+	saveAudit(db, p.db, ACTION_CREATE, auditProps)
 }
 
 // Hook for after_delete.
 func (p *Plugin) addDeleted(db *gorm.DB) {
-	saveAudit(db, ACTION_DELETE, auditProps)
+	saveAudit(db, p.db, ACTION_DELETE, auditProps)
 }
 
 // Hook for after_update.
 func (p *Plugin) addUpdated(db *gorm.DB) {
-	saveAudit(db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
+	saveAudit(db, p.db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
 		buff := bytes.Buffer{}
 
 		original := map[string]interface{}{}
-		// using db instead of p.db will generate "database lock" error
-		db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
+		p.db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
 
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
@@ -79,7 +78,7 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 	return
 }
 
-func saveAudit(cbDB *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
+func saveAudit(cbDB, db *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
 	if cbDB.Statement.Schema.Name == "Audits" || checkAuditName(cbDB) {
 		return
 	}
@@ -100,32 +99,8 @@ func saveAudit(cbDB *gorm.DB, action string, fnChanges func(db *gorm.DB, id int6
 			Remote_address:  auditData.Address,
 			Audited_changes: fmt.Sprintf("---%s", buff.String()),
 			Created_at:      time.Now()}
-
-		auditErr := cbDB.Exec(fmt.Sprintf(`
-			INSERT INTO
-				%s
-				(
-					auditable_id,
-					"action",
-					auditable_type,
-					"version",
-					request_uuid,
-					remote_address,
-					audited_changes,
-					created_at)
-			VALUES
-				(%v, %q, %q, %v, %q, %q, "%s", %q);
-		`, getAuditTableName(),
-			audit.Auditable_id,
-			audit.Action,
-			audit.Auditable_type,
-			audit.Version,
-			audit.Request_uuid,
-			audit.Remote_address,
-			audit.Audited_changes,
-			audit.Created_at.String())).Error
-		if auditErr != nil {
-			log.Printf("audits insert error - %v", auditErr)
+		if err := db.Table(getAuditTableName()).Create(&audit).Error; err != nil {
+			log.Printf("audits insert error - %v", err)
 		}
 	}
 }

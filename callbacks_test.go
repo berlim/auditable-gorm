@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -31,8 +31,8 @@ const (
 
 func TestAddCreated(t *testing.T) {
 	t.Run("with context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, true)
+		cleanDB(t, db)
 
 		user := User{
 			Name:   "Janderson",
@@ -57,8 +57,8 @@ func TestAddCreated(t *testing.T) {
 	})
 
 	t.Run("without context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, false)
+		cleanDB(t, db)
 
 		user := User{
 			Name:   "Janderson",
@@ -85,8 +85,8 @@ func TestAddCreated(t *testing.T) {
 
 func TestAddDelete(t *testing.T) {
 	t.Run("with context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, true)
+		cleanDB(t, db)
 
 		user := getUser()
 
@@ -111,8 +111,8 @@ func TestAddDelete(t *testing.T) {
 	})
 
 	t.Run("without context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, false)
+		cleanDB(t, db)
 
 		user := getUser()
 
@@ -139,8 +139,8 @@ func TestAddDelete(t *testing.T) {
 
 func TestAddUpdate(t *testing.T) {
 	t.Run("with context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, true)
+		cleanDB(t, db)
 
 		user := getUser()
 
@@ -174,8 +174,8 @@ func TestAddUpdate(t *testing.T) {
 	})
 
 	t.Run("without context", func(t *testing.T) {
-		cleanDB(t)
 		db := connectDB(t, false)
+		cleanDB(t, db)
 
 		user := getUser()
 
@@ -214,18 +214,15 @@ func getUser() User {
 }
 
 // cleanDB to always run tests on a fresh db
-func cleanDB(t *testing.T) {
-	t.Helper()
-	if _, err := os.Stat(DB_PATH); err == nil {
-		if err := os.Remove(DB_PATH); err != nil {
-			t.Fatal(err)
-		}
-	}
+func cleanDB(t *testing.T, db *gorm.DB) {
+	db.Where("id > ?", 0).Delete(&User{})
+	db.Where("id > ?", 0).Delete(&Audits{})
 }
 
 func connectDB(t *testing.T, withCtx bool) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(DB_PATH), &gorm.Config{
+	dsn := "host=localhost user=postgres password=root dbname=audit_test port=5432 sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 			logger.Config{
