@@ -14,11 +14,12 @@ import (
 )
 
 type User struct {
-	Id    int64 `gorm:"auto:id"`
-	Name  string
-	Age   int
-	Email string
-	Desc  string
+	Id     int64 `gorm:"auto:id"`
+	Name   string
+	Age    int
+	Email  string
+	Desc   string
+	Amount float64
 }
 
 var DB_PATH = path.Join("db", "test.db")
@@ -34,9 +35,10 @@ func TestAddCreated(t *testing.T) {
 		db := connectDB(t, true)
 
 		user := User{
-			Name:  "Janderson",
-			Age:   28,
-			Email: "example@email.com"}
+			Name:   "Janderson",
+			Age:    28,
+			Email:  "example@email.com",
+			Amount: 122.99}
 
 		if err := db.Create(&user).Error; err != nil {
 			t.Fatal(err)
@@ -51,7 +53,7 @@ func TestAddCreated(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, IP, audits.Remote_address)
 		assert.Equal(t, UUID, audits.Request_uuid)
-		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nname: Janderson\nage: 28\nemail: example@email.com\namount: 122.99", audits.Audited_changes)
 	})
 
 	t.Run("without context", func(t *testing.T) {
@@ -59,9 +61,10 @@ func TestAddCreated(t *testing.T) {
 		db := connectDB(t, false)
 
 		user := User{
-			Name:  "Janderson",
-			Age:   28,
-			Email: "example@email.com"}
+			Name:   "Janderson",
+			Age:    28,
+			Email:  "example@email.com",
+			Amount: 122.99}
 
 		if err := db.Create(&user).Error; err != nil {
 			t.Fatal(err)
@@ -76,7 +79,7 @@ func TestAddCreated(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, "", audits.Remote_address)
 		assert.Equal(t, "", audits.Request_uuid)
-		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nname: Janderson\nage: 28\nemail: example@email.com\namount: 122.99", audits.Audited_changes)
 	})
 }
 
@@ -104,7 +107,7 @@ func TestAddDelete(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, IP, audits.Remote_address)
 		assert.Equal(t, UUID, audits.Request_uuid)
-		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nname: Janderson\nage: 28\nemail: example@email.com\namount: 122.99", audits.Audited_changes)
 	})
 
 	t.Run("without context", func(t *testing.T) {
@@ -130,7 +133,7 @@ func TestAddDelete(t *testing.T) {
 		assert.Equal(t, int64(1), audits.Version)
 		assert.Equal(t, "", audits.Remote_address)
 		assert.Equal(t, "", audits.Request_uuid)
-		assert.Equal(t, "---\nid: 1\nname: Janderson\nage: 28\nemail: example@email.com", audits.Audited_changes)
+		assert.Equal(t, "---\nname: Janderson\nage: 28\nemail: example@email.com\namount: 122.99", audits.Audited_changes)
 	})
 }
 
@@ -148,6 +151,8 @@ func TestAddUpdate(t *testing.T) {
 		user.Name = "Janderson Updated"
 		user.Email = "updated@email.com"
 		user.Desc = "example"
+		user.Age = 12
+		user.Amount = 133.12
 		if err := db.Save(&user).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -163,6 +168,8 @@ func TestAddUpdate(t *testing.T) {
 		assert.Equal(t, UUID, audits.Request_uuid)
 		assert.Contains(t, audits.Audited_changes, "\nname:\n- Janderson\n- Janderson Updated")
 		assert.Contains(t, audits.Audited_changes, "\nemail:\n- example@email.com\n- updated@email.com")
+		assert.Contains(t, audits.Audited_changes, "\nage:\n- 28\n- 12")
+		assert.Contains(t, audits.Audited_changes, "\namount:\n- 122.99\n- 133.12")
 		assert.Contains(t, audits.Audited_changes, "\ndesc:\n- \n- example")
 	})
 
@@ -200,9 +207,10 @@ func TestAddUpdate(t *testing.T) {
 
 func getUser() User {
 	return User{
-		Name:  "Janderson",
-		Age:   28,
-		Email: "example@email.com"}
+		Name:   "Janderson",
+		Age:    28,
+		Email:  "example@email.com",
+		Amount: 122.99}
 }
 
 // cleanDB to always run tests on a fresh db

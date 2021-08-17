@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 	"strings"
 	"time"
 
@@ -40,10 +39,28 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
 				destK = strings.ToLower(destK)
-				if originalV, ok := original[destK]; ok && originalV != destV {
-					if !reflect.DeepEqual(destV, destK) {
+				if checkIgnoreKey(destK) {
+					continue
+				}
+				if originalV, ok := original[destK]; ok {
+					var destS, originalS string
+					switch destV.(type) {
+					case float32, float64:
+						switch originalV.(type) {
+						case float32, float64:
+							destS = fmt.Sprintf("%v", destV)
+							originalS = fmt.Sprintf("%v", originalV)
+						default:
+							destS = fmt.Sprintf("%.f", destV)
+							originalS = fmt.Sprintf("%v", originalV)
+						}
+					default:
+						destS = fmt.Sprintf("%v", destV)
+						originalS = fmt.Sprintf("%v", originalV)
+					}
+					if originalS != destS {
 						buff.WriteString(
-							fmt.Sprintf("\n%s:\n- %v\n- %v", destK, originalV, destV))
+							fmt.Sprintf("\n%s:\n- %v\n- %v", destK, originalS, destS))
 					}
 				}
 			}
@@ -62,32 +79,29 @@ func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
 	return
 }
 
-func saveAudit(db *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
-	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
+func saveAudit(cbDB *gorm.DB, action string, fnChanges func(db *gorm.DB, id int64) bytes.Buffer) {
+	if cbDB.Statement.Schema.Name == "Audits" || checkAuditName(cbDB) {
 		return
 	}
 	var id int64
-	idValue, isZero := db.Statement.Schema.PrioritizedPrimaryField.ValueOf(db.Statement.ReflectValue)
+	idValue, isZero := cbDB.Statement.Schema.PrioritizedPrimaryField.ValueOf(cbDB.Statement.ReflectValue)
 	if !isZero {
 		id = idValue.(int64)
 	}
-	buff := fnChanges(db, id)
+	buff := fnChanges(cbDB, id)
 	if buff.Len() > 0 {
-		auditData := getAuditData(db)
+		auditData := getAuditData(cbDB)
 		audit := Audits{
 			Auditable_id:    id,
 			Action:          action,
-			Auditable_type:  db.Statement.Schema.Name,
+			Auditable_type:  cbDB.Statement.Schema.Name,
 			Version:         int64(1),
 			Request_uuid:    auditData.UUID,
 			Remote_address:  auditData.Address,
 			Audited_changes: fmt.Sprintf("---%s", buff.String()),
 			Created_at:      time.Now()}
-		db.Transaction(func(tx *gorm.DB) error {
-			return tx.Model(&Audits{}).Create(&audit).Error
-		})
 
-		auditErr := db.Exec(fmt.Sprintf(`
+		auditErr := cbDB.Exec(fmt.Sprintf(`
 			INSERT INTO
 				%s
 				(
@@ -138,10 +152,25 @@ func getAuditData(db *gorm.DB) AuditData {
 
 func auditProps(db *gorm.DB, id int64) (buff bytes.Buffer) {
 	for _, field := range db.Statement.Schema.Fields {
+		if checkIgnoreKey(field.DBName) {
+			continue
+		}
 		fieldValue, isZero := field.ValueOf(db.Statement.ReflectValue)
 		if !isZero {
 			buff.WriteString(fmt.Sprintf("\n%s: %v", field.DBName, fieldValue))
 		}
 	}
 	return
+}
+
+var keysToIgnore = map[string]bool{
+	"id":         true,
+	"created_at": true,
+	"updated_at": true,
+	"password":   true,
+}
+
+func checkIgnoreKey(key string) bool {
+	_, ok := keysToIgnore[key]
+	return ok
 }
