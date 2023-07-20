@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -15,16 +16,78 @@ const (
 	ACTION_CREATE = "create"
 	ACTION_UPDATE = "update"
 	ACTION_DELETE = "delete"
+	ACTION_QUERY  = "query"
 )
 
 // Hook for after_create.
 func (p *Plugin) addCreated(db *gorm.DB) {
 	saveAudit(db, p.db, ACTION_CREATE, auditProps)
+	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
+		return
+	}
+	writeCache(db, p.dbName)
 }
 
 // Hook for after_delete.
 func (p *Plugin) addDeleted(db *gorm.DB) {
 	saveAudit(db, p.db, ACTION_DELETE, auditProps)
+	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
+		return
+	}
+	removeCache(db, p.dbName)
+}
+
+// Hook for after_query.
+func (p *Plugin) addQuery(db *gorm.DB) {
+	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
+		return
+	}
+	writeCache(db, p.dbName)
+}
+
+func writeCache(db *gorm.DB, dbName string) error {
+	b, err := json.Marshal(db.Statement.Model)
+	if err != nil {
+		return err
+	}
+
+	modelName := mountUpdateTableName(db)
+	var pk int64
+	idValue, isZero := db.Statement.Schema.PrioritizedPrimaryField.ValueOf(db.Statement.ReflectValue)
+	if !isZero {
+		pk = idValue.(int64)
+	}
+	writeOriginal(b, dbName, modelName, pk)
+	return nil
+}
+
+func removeCache(db *gorm.DB, dbName string) error {
+	b, err := json.Marshal(db.Statement.Model)
+	if err != nil {
+		return err
+	}
+
+	modelName := mountUpdateTableName(db)
+	var pk int64
+	idValue, isZero := db.Statement.Schema.PrioritizedPrimaryField.ValueOf(db.Statement.ReflectValue)
+	if !isZero {
+		pk = idValue.(int64)
+	}
+	deleteOriginal(b, dbName, modelName, pk)
+	return nil
+}
+
+func getOriginal(id int64, dbName string, modelName string) (map[string]interface{}, error) {
+	original := map[string]interface{}{}
+
+	bytes, err := readOriginal(dbName, modelName, id)
+	if err != nil {
+		fmt.Println(err)
+		return map[string]interface{}{}, err
+	}
+	json.Unmarshal(bytes, &original)
+
+	return original, nil
 }
 
 // Hook for after_update.
@@ -32,12 +95,12 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 	saveAudit(db, p.db, ACTION_UPDATE, func(db *gorm.DB, id int64) bytes.Buffer {
 		buff := bytes.Buffer{}
 
-		original := map[string]interface{}{}
-		p.db.Table(mountUpdateTableName(db)).Where("id = ?", id).Find(&original)
-
+		original, err := getOriginal(id, p.dbName, mountUpdateTableName(db))
+		if err != nil {
+			return bytes.Buffer{}
+		}
 		if dest, err := getModelAsMap(db.Statement.Model); err == nil {
 			for destK, destV := range dest {
-				destK = strings.ToLower(destK)
 				if checkIgnoreKey(destK) {
 					continue
 				}
@@ -67,6 +130,11 @@ func (p *Plugin) addUpdated(db *gorm.DB) {
 
 		return buff
 	})
+
+	if db.Statement.Schema.Name == "Audits" || checkAuditName(db) {
+		return
+	}
+	writeCache(db, p.dbName)
 }
 
 func getModelAsMap(model interface{}) (out map[string]interface{}, err error) {
@@ -132,17 +200,35 @@ func auditProps(db *gorm.DB, id int64) (buff bytes.Buffer) {
 		}
 		fieldValue, isZero := field.ValueOf(db.Statement.ReflectValue)
 		if !isZero {
-			buff.WriteString(fmt.Sprintf("\n%s: %v", field.DBName, fieldValue))
+			buff.WriteString(fmt.Sprintf("\n%s: %v", field.Name, fieldValue))
 		}
 	}
 	return
 }
 
+func writeOriginal(original []byte, dbName string, modelName string, pk int64) error {
+	fileName := fmt.Sprintf("tmp/%s_%s_%d.audit", dbName, modelName, pk)
+	return os.WriteFile(fileName, original, 0644)
+}
+
+func deleteOriginal(original []byte, dbName string, modelName string, pk int64) error {
+	fileName := fmt.Sprintf("tmp/%s_%s_%d.audit", dbName, modelName, pk)
+	return os.Remove(fileName)
+}
+
+func readOriginal(dbName string, modelName string, pk int64) ([]byte, error) {
+	fileName := fmt.Sprintf("tmp/%s_%s_%d.audit", dbName, modelName, pk)
+	return os.ReadFile(fileName)
+}
+
 var keysToIgnore = map[string]bool{
 	"id":         true,
+	"Id":         true,
+	"ID":         true,
 	"created_at": true,
+	"CreatedAt":  true,
 	"updated_at": true,
-	"password":   true,
+	"UpdatedAt":  true,
 }
 
 func checkIgnoreKey(key string) bool {

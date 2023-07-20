@@ -16,3 +16,4 @@
 
 # sqlite
 *.db
+tmp/*.audit
